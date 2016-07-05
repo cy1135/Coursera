@@ -1,0 +1,7 @@
+name: Publish Document
+account: rpubs
+server: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/190669/936d687e8dbc40e0a8d979f8c1ca186a
+bundleId: https://api.rpubs.com/api/v1/document/190669/936d687e8dbc40e0a8d979f8c1ca186a
+url: http://rpubs.com/cy1135/190669/edit
+when: 1466355981.03643

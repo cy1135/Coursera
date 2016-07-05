@@ -1,0 +1,235 @@
+---
+title: "Regression Models Course Project"
+author: "Charles Yoo"
+date: "June 21, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Executive Summary
+
+Using the mtcars dataset, the relationship between miles per gallon (MPG) and a set of variables.  Exploratory data analysis and regression analysis will be used to explore how automatic and manual tramissions affect MPG.  The difference between automatic and manual transmissions quantifying MPG.  
+
+Cars with manual transmission hold a higher MPG than those with automatic transmissions.  
+
+Refer to Appendex for extended output and plots.
+
+## Data Processing
+
+Load the dataset
+```{r eval = TRUE}
+data(mtcars)
+```
+
+Summary of Data
+```{r eval = FALSE}
+head(mtcars)
+```
+
+## Exploratory Data Analysis
+
+Looking at MPG
+```{r eval = FALSE}
+summary(mtcars$mpg)
+```
+
+Boxplot of MPG vs Transmission Type
+```{r eval = FALSE}
+boxplot(mpg ~ am, data = mtcars, 
+        xlab = "Transmission Type (0 = Automatic, 1 = Manual", 
+        ylab = "MPG",
+        main = "MPG vs Transmission Type")
+```
+
+We see that the manual transmission has a higher MPG than automatic.
+
+Statistical Inference
+```{r eval = FALSE}
+t.test(mpg ~ am, data = mtcars)
+```
+
+P-value is basically 0, so significant.  The differences between the transmissions are significant.
+
+## Regression Analysis
+
+*Correlation*
+
+```{r eval = FALSE}
+cor(mtcars)[1,]
+```
+
+Based on correlations, we see very strong correlations with variables  
+
+    cyl, disp, hp, wt, drat, vs, am
+
+*Simple Linear Regression Model*
+
+**Base Model**
+```{r eval = TRUE}
+baseModel <- lm(mpg ~ am, data = mtcars)
+```
+
+```{r eval = FALSE}
+summary(baseModel)
+```
+
+A decent p-value, but have a 33.9% Adjusted R-Squared, indicating not sufficient to explain the variance around MPG.
+
+*Multivariable Regression Model*
+
+**Model 1**  
+Looking at Everything
+```{r eval = TRUE, results = "hide"}
+initialModel <- lm(mpg ~ ., data = mtcars)
+# step to find a better model
+betterModel <- step(initialModel, direction = "both")
+```
+
+Compare Models
+```{r eval = FALSE}
+anova(baseModel, betterModel)
+summary(initialModel)
+summary(betterModel)
+```
+
+Including all variables, our Adjusted R-squared rises to 80.7%, and a superior p-value.  Can we do better?
+
+**Model 2**
+Since maybe a relationship between am and wt
+```{r eval = TRUE}
+amwtModel <- lm(mpg ~  wt + qsec + am + wt:am, data = mtcars)
+```
+
+Look at new model
+```{r eval = FALSE}
+summary(amwtModel)
+```
+
+Our best model so far, with the best p-value and Adjusted R-Squared of 88%
+
+Plot New Model
+```{r eval = FALSE}
+par(mfrow = c(2, 2))
+plot(amwtModel)
+```
+
+Check all models
+```{r eval = FALSE}
+anova(baseModel, betterModel, amwtModel)
+```
+
+## Conclusion
+
+The results show that manual transmission has a greater positive influence on MPG than automatic.  
+
+## Appendix
+
+Boxplot of MPG vs Transmission Type
+```{r eval = TRUE}
+boxplot(mpg ~ am, data = mtcars, 
+        xlab = "Transmission Type (0 = Automatic, 1 = Manual", 
+        ylab = "MPG",
+        main = "MPG vs Transmission Type")
+```
+
+Statistical Inference
+```{r eval = TRUE}
+t.test(mpg ~ am, data = mtcars)
+```
+
+Compare BaseModel to BetterModel
+```{r eval = FALSE}
+anova(baseModel, betterModel)
+summary(baseModel)
+summary(initialModel)
+summary(betterModel)
+```
+
+Other Summary Tools
+```{r eval = FALSE}
+# description of variables
+ str(mtcars)
+
+# summary of dataset
+ summary(mtcars)
+
+# count number of rows
+ nrow(mtcars)
+ dim(mtcars)
+
+# exploration of data
+ unique(mtcars)
+```
+
+Step Model of Everything
+```{r eval = FALSE}
+bestModel <- step(initialModel, direction = "both")
+```
+
+Pair Graph of Motor Trend Car Road Tests
+```{r eval = FALSE}
+pairs(mtcars, panel=panel.smooth, main="Pair Graph of Motor Trend Car Road Tests")
+```
+
+####Plots and Other Unsuccessful Models
+
+Based on initial model and coefficients
+
+Model 2
+Plot New Model
+```{r eval = TRUE}
+amwtModel <- lm(mpg ~  wt + qsec + am + wt:am, data = mtcars)
+summary(amwtModel)
+par(mfrow = c(2, 2))
+plot(amwtModel)
+```
+
+Model 3
+```{r eval = TRUE}
+newModel <- lm(mpg ~ cyl + wt + vs + am, data = mtcars)
+#summary(newModel)
+#par(mfrow = c(2, 2))
+#plot(newModel)
+```
+
+Model 4
+```{r eval = TRUE}
+new2Model <- lm(mpg ~  wt + qsec + am, data = mtcars)
+#summary(new2Model)
+#par(mfrow = c(2, 2))
+#plot(new2Model)
+```
+
+Model 5
+```{r eval = TRUE}
+improvedModel <- lm(mpg ~ cyl + disp + wt + hp + am, data = mtcars)
+#summary(improvedModel)
+#par(mfrow = c(2, 2))
+#plot(improvedModel)
+```
+
+Factor variables
+```{r eval = TRUE}
+mtcars$cyl <- factor(mtcars$cyl)
+mtcars$vs <- factor(mtcars$vs)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+mtcars$am <- factor(mtcars$am)
+```
+
+Scatter Plot of MPG vs Weight by Transmission
+```{r eval = TRUE}
+#ggplot(mtcars, aes(x = wt, y = mpg, group = am, color = am)) + 
+#        geom_point() +
+#        scale_colour_discrete(labels = c("Automatic", "Manual")) +
+#        xlab("weight") +
+#        ggtitle("Scatter Plot of MPG vs Weight by Transmission")
+```
+## References
+https://rstudio-pubs-static.s3.amazonaws.com/29778_09382a14e5294dce9c8758b5be04968c.html  
+http://rodrigodealexandre.github.io/DS-Courses/Regression%20Models/Data/Course%20Project.html  
+https://github.com/Xiaodan/Coursera-Regression-Models/blob/master/motor_trend_project/report.Rmd  

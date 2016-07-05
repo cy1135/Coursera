@@ -1,0 +1,145 @@
+---
+title: "ToothGrowth Inferential Data Analysis"
+author: "Charles Yoo"
+date: "June 19, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Overview
+
+This project investigages the correlation that various dosages and supplements have on tooth length using the ToothGrowth dataset.  The null hypothesis is that OJ has a stronger efficacy on tooth growth than Vitamin C.
+
+## Load Data
+
+```{r eval = TRUE}
+data(ToothGrowth)
+```
+
+## Summary of Data
+```{r eval = TRUE}
+# description of variables
+str(ToothGrowth)
+
+# summary of dataset
+summary(ToothGrowth)
+
+# look at first 6 rows
+head(ToothGrowth)
+
+# count number of rows
+nrow(ToothGrowth)
+dim(ToothGrowth)
+
+# exploration of data
+unique(ToothGrowth$dose)
+unique(ToothGrowth$supp)
+
+# table comparing dose to supp
+table(ToothGrowth$dose, ToothGrowth$supp)
+```
+
+## Comparison of dose to supp
+
+```{r eval = TRUE}
+ggplot(ToothGrowth, aes(x = supp, y = len)) +
+        geom_boxplot(aes(fill = factor(supp))) +
+        facet_grid(. ~ dose) +
+        xlab("Supplement") +
+        ylab("Tooth Length") +
+        ggtitle("Toothgrowth length vs supplement by dose")
+```
+
+We see a visual correlation between dose size and tooth length.  The higher the dosage of the supplement affects a longer tooth length.  We also see that the type of supplement may have an effect on tooth length as well at the lower dosages.
+
+## Confidence intervals
+
+*Null-hypotheis*
+
+OJ supplement has a more impact than Vitamin C.
+
+#### T-test supplment as factor
+
+Assign variables
+```{r eval = TRUE}
+length <- ToothGrowth$len
+supplement <- ToothGrowth$supp
+dosage <- ToothGrowth$dose
+```
+
+T-test on supplement
+```{r eval = TRUE}
+t.test(length[supplement == "OJ"], length[supplement == "VC"], paired = FALSE, var.equal = FALSE)
+```
+The confidence interval [-0.1710156, 7.5710156] and the p value 0.06063 shows a significance. The difference in mean is not significant enough to support the null hypothesis.
+
+#### T-test dosages as factor
+
+Assign variables
+```{r eval = TRUE}
+dose0510 <- subset(ToothGrowth, dose %in% c(0.5, 1.0))
+dose0520 <- subset(ToothGrowth, dose %in% c(0.5, 2.0))
+dose1020 <- subset(ToothGrowth, dose %in% c(1.0, 2.0))
+```
+
+T-test on doses
+0.5 & 1.0
+```{r eval = TRUE}
+t.test(len ~ dose, paired = FALSE, var.equal = FALSE, data = dose0510)
+```
+The confidence interval [-11.983781, -6.276219] and the p-value 1.268e-07, essentially 0, shows a significant correlation between tooth length and dose levels.  There is a significant difference between the dosages that the null hypothesis is true.
+
+0.5 & 2.0
+```{r eval = TRUE}
+t.test(len ~ dose, paired = FALSE, var.equal = FALSE, data = dose0520)
+```
+The confidence interval [-18.15617, -12.83383] and the p-value 4.398e-14, essentially 0, shows a significant correlation between tooth length and dose levels.  There is a significant difference between the dosages that the null hypothesis is true.
+
+1.0 & 2.0
+```{r eval = TRUE}
+t.test(len ~ dose, paired = FALSE, var.equal = FALSE, data = dose1020)
+```
+The confidence interval [-8.996481, -3.733519] and the p-value 1.906e-05, essentially 0, shows a significant correlation between tooth length and dose levels.  There is a significant difference between the dosages that the null hypothesis is true.
+
+#### T-test supplement as factor within dosage levels
+
+Assign variables
+```{r eval = TRUE}
+dose05 <- subset(ToothGrowth, dose == 0.5)
+dose10 <- subset(ToothGrowth, dose == 1.0)
+dose20 <- subset(ToothGrowth, dose = 2.0)
+```
+
+T-test on supplement with doses
+0.5
+```{r eval = TRUE}
+t.test(len ~ supp, paired = FALSE, var.equal = FALSE, data = dose05)
+```
+The confidence interval [1.719057, 8.780943] and the p-value 0.006359, essentially 0, shows a significant correlation between tooth length and dose levels.  There is a significant difference between the dosages that the null hypothesis is true.
+
+1.0
+```{r eval = TRUE}
+t.test(len ~ supp, paired = FALSE, var.equal = FALSE, data = dose10)
+```
+The confidence interval [2.802148, 9.057852] and the p-value 0.001038, essentially 0, shows a significant correlation between tooth length and dose levels.  There is a significant difference between the dosages that the null hypothesis is true.
+
+2.0
+```{r eval = TRUE}
+t.test(len ~ supp, paired = FALSE, var.equal = FALSE, data = dose20)
+```
+The confidence interval [-0.1710156  7.5710156] and the p-value 0.06063, essentially 0, shows a significant correlation between tooth length and dose levels.  The difference in mean is not significant enough to support the null hypothesis.
+
+## Conclusions
+
+* There is no significance difference in tooth lengths when looking at supplements only.  
+* There is a significance difference in tooth lengths when looking at dosages only.  
+
+### References
+
+http://rstudio-pubs-static.s3.amazonaws.com/56907_9a9016c4f4df4d10aa7afaed5eed1d77.html  
+https://rpubs.com/YevgenyY/si_cp2  
+http://rstudio-pubs-static.s3.amazonaws.com/26135_b10068633b5948848d2c28fc0a752d78.html  

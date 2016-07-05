@@ -1,0 +1,114 @@
+---
+title: "Prediction Assignment"
+author: "Charles Yoo"
+date: "June 25, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(randomForest)
+```
+
+## SUMMARY
+
+This is for the Practical Machine Learning project.  A prediction model is made, using Random Forest, to predict behavior based on the training data provided.  The machine learning algorithm will then be applied to the testing data to answer the 20 test cases.
+
+The data is based on the study found at:
+
+    http://groupware.les.inf.puc-rio.br/har
+
+The training data:
+
+    https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The testing data:
+
+    https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+Credit for use of the data:
+
+    Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. “Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human ’13)”. Stuttgart, Germany: ACM SIGCHI, 2013.
+    
+#### Get the data
+```{r}
+# set workind directory to where Rmd and csv's live
+
+trainingData <- read.csv("pml-training.csv", na.strings = c("NA", "#DIV/0!", ""))
+testingData <- read.csv("pml-testing.csv", na.strings = c("NA", "#DIV/0!", ""))
+
+# examine the data
+dim(trainingData)
+dim(testingData)
+```
+
+#### Remove nearZeroVar predictors, predictors that have one unique value or few unique values relative to the number of samples and the ratio of the frequency of the most common value to the frequency of teh second most common value is large
+```{r}
+nzvTraining <- nearZeroVar(trainingData)
+trainingSet <- trainingData[, -nzvTraining]
+dim(trainingSet)
+```
+
+#### Remove variables that are mostly NA
+```{r}
+naSet <- sapply(trainingSet, function(x) mean(is.na(x))) > 0.95
+trainingSet <- trainingSet[, naSet == FALSE]
+dim(trainingSet)
+```
+
+#### Remove the first six identifying variables
+```{r}
+trainingSet <- trainingSet[, -(1:6)]
+dim(trainingSet)
+```
+
+#### Create two partitions of the training set, one for training, the other for processing
+#### Leave the testing set untouched for the quiz results
+```{r}
+training <- createDataPartition(trainingSet$classe, p = 0.7, list = FALSE)
+trainingSet <- trainingSet[training, ]
+testingSet <- trainingSet[-training, ]
+dim(trainingSet)
+dim(testingSet)
+```
+
+## TRAINING
+
+#### Training the predictor
+```{r}
+set.seed(12345)
+controlRF <- trainControl(method = "cv", 
+                                    number = 3, 
+                                    verboseIter = TRUE)
+modFitRF <- train(classe ~ ., 
+                  data = trainingSet, 
+                  method = "rf", 
+                  trControl = controlRF)
+modFitRF$finalModel
+```
+
+#### Test predictior on testingSet 
+```{r}
+predictRF <- predict(modFitRF, newdata = testingSet)
+# confusion matrix
+confMatRF <- confusionMatrix(predictRF, testingSet$classe)
+confMatRF
+```
+
+## APPLY TO TESTING DATA
+
+####
+```{r}
+test <- predict(modFitRF, newdata = testingData)
+test
+```
+
+#### References
+
+http://www.danielemaasit.com/MachineLearning/predictionAssignment.html  
+http://fss14142.github.io/CourseraMachineLearningProject/project.html  
+https://github.com/Xiaodan/Coursera-PML-Quantified-Self-Project/blob/gh-pages/report.Rmd
+https://rpubs.com/mjtardelli/PracticalMachineLearning
+https://rpubs.com/DIM302/PracticalMachineLearning
+https://rstudio-pubs-static.s3.amazonaws.com/29426_041c5ccb9a6a4bedb204e33144bb0ad4.html

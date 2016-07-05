@@ -1,0 +1,236 @@
+---
+title: "Reproducible Research Course Project 2"
+author: "Charles Yoo"
+date: "June 17, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+knitr::opts_chunk$set(echo = TRUE)
+library(reshape2)
+library(ggplot2)
+```
+Reference: 
+http://rpubs.com/cneiderer/rrCourseProject2
+https://rpubs.com/withgemini/25349
+https://github.com/paul-reiners/reproducible-research-project-2/blob/master/StormReport.Rmd
+http://54.225.166.221/Drarreg/rrcourseproject2
+
+## Project Title
+
+U.S. National Oceanic and Atmospheric Administration's (NOAA) Storm Database Analysis
+
+## Synopsis
+
+Storms and other severe weather events can cause both public health and economic problems for communities and municipalities. Many severe events can result in fatalities, injuries, and property damage, and preventing such outcomes to the extent possible is a key concern.
+
+This project involves exploring the U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database. This database tracks characteristics of major storms and weather events in the United States, including when and where they occur, as well as estimates of any fatalities, injuries, and property damage.
+
+#### Questions to Answer
+
+* Across the United States, which types of events (as indicated in the 𝙴𝚅𝚃𝚈𝙿𝙴 variable) are most harmful with respect to population health?  
+
+* Across the United States, which types of events have the greatest economic consequences?
+
+## Data Processing
+
+[https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2] (Storm Data)  
+[https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf] (National Weather Service Storm Data Documentation)  
+[https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2FNCDC%20Storm%20Events-FAQ%20Page.pdf] (National Climatic Data Center Storm Events FAQ)  
+
+The events in the database start in the year 1950 and end in November 2011. In the earlier years of the database there are generally fewer events recorded, most likely due to a lack of good records. More recent years should be considered more complete.
+
+Download, extract and read CSV file
+```{r eval = TRUE}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
+              dest="stormdata.bz2",
+              method="curl")
+
+data <- read.csv(bzfile("stormdata.bz2"),
+                header = TRUE,
+                sep = ",", 
+                stringsAsFactors = FALSE)
+```
+
+Examine data
+```{r eval = TRUE}
+str(data)  
+summary(data)  
+```
+
+View data
+```{r eval = FALSE}
+#View(data)
+```
+
+Lowercase variable names
+```{r eval = TRUE}
+colnames(data) <- tolower(colnames(data))
+```
+
+Change to factor for event types
+```{r eval = TRUE}
+data$evtype <- as.factor(data$evtype)
+```
+
+Change dates to POSIXct
+```{r eval = TRUE}
+data$bgn_date <- as.Date(data$bgn_date, "%m/%d/%Y")
+data$end_date <- as.Date(data$end_date, "%m/%d/%Y")
+```
+
+Subset data to records that have fatalities, injuries related only
+```{r eval = TRUE}
+fData <- subset(data, subset = data$fatalities > 0)
+iData <- subset(data, subset = data$injuries > 0)
+phyData <- rbind(fData, iData)
+```
+
+Subset data to records that have property, crop damage related only
+```{r eval = TRUE}
+pData <- subset(data, subset = data$propdmg > 0)
+cData <- subset(data, subset = data$cropdmg > 0)
+ecoData <- rbind(pData, cData)
+```
+
+Subset data to records that have fatalities, injuries, property and crop damage
+```{r eval = TRUE}
+data <- rbind(phyData, ecoData)
+```
+
+View data
+```{r eval = FALSE}
+#View(data)
+```
+
+Upper property and crop exponent multipliers
+Map multipliers to numeric values
+```{r eval = TRUE}
+data$propdmgexp <- toupper(data$propdmgexp)
+data$cropdmgexp <- toupper(data$cropdmgexp)
+
+pDmgExp <- c("\"\"" = 10^0,
+             "-"    = 10^0, 
+             "+"    = 10^0,
+             "0"    = 10^0,
+             "1"    = 10^1,
+             "2"    = 10^2,
+             "3"    = 10^3,
+             "4"    = 10^4,
+             "5"    = 10^5,
+             "6"    = 10^6,
+             "7"    = 10^7,
+             "8"    = 10^8,
+             "9"    = 10^9,
+             "H"    = 10^2,
+             "K"    = 10^3,
+             "M"    = 10^6,
+             "B"    = 10^9)
+
+data$propdmgexp <- pDmgExp[as.character(data$propdmgexp)]
+data$propdmgexp[is.na(data$propdmgexp)] <- 10^0
+
+cDmgExp <- c("\"\"" = 10^0,
+             "?"    = 10^0,
+             "0"    = 10^0,
+             "K"    = 10^3,
+             "M"    = 10^6,
+             "B"    = 10^9)
+
+data$cropdmgexp <- cDmgExp[as.character(data$cropdmgexp)]
+data$cropdmgexp[is.na(data$cropdmgexp)] <- 10^0
+```
+
+Aggregate data for physical data, calculating totals
+```{r eval = TRUE}
+aggregatedPhysicalData <- aggregate(cbind(fatalities, injuries) ~ evtype, data = data, FUN = sum)
+aggregatedPhysicalData$total <- aggregatedPhysicalData$fatalities + aggregatedPhysicalData$injuries
+```
+
+Determine events with the highest physical impact, by aggregating data
+```{r eval = TRUE}
+# aggregated data greater than 0
+aggregatedPhysicalData <- aggregatedPhysicalData[aggregatedPhysicalData$total > 0, ]
+# sort in descending order
+aggregatedPhysicalData <- aggregatedPhysicalData[order(aggregatedPhysicalData$total, decreasing = TRUE), ]
+
+# renumber rows in descending order
+rownames(aggregatedPhysicalData) <- 1:nrow(aggregatedPhysicalData)
+
+# top 10
+aggregatedPhysicalDataTop10 <- aggregatedPhysicalData[1:10, ]
+```
+
+Calculate property and crop loss based on exponent multipliers
+```{r eval = TRUE}
+data$propertyLoss <- data$propdmg * data$propdmgexp
+data$cropLoss <- data$cropdmg * data$cropdmgexp
+```
+
+Aggregate data for economic data, calculating totals
+```{r eval = TRUE}
+aggregatedEconomicData <- aggregate(cbind(propertyLoss, cropLoss) ~ evtype, data = data, FUN = sum)
+# create total field 
+aggregatedEconomicData$total <- aggregatedEconomicData$propertyLoss + aggregatedEconomicData$cropLoss
+```
+
+Determine events with the highest economic impact
+```{r eval = TRUE}
+# aggregated data greater than 0
+aggregatedEconomicData <- aggregatedEconomicData[aggregatedEconomicData$total > 0, ]
+# sort in descending order
+aggregatedEconomicData <- aggregatedEconomicData[order(aggregatedEconomicData$total, decreasing = TRUE), ]
+
+# renumber rows in descending order
+rownames(aggregatedEconomicData) <- 1:nrow(aggregatedEconomicData)
+
+# top 10
+aggregatedEconomicDataTop10 <- aggregatedEconomicData[1:10, ]
+```
+
+## Results
+
+Plot of the top ten event types with the highest fatality and injury counts
+```{r eval = TRUE}
+# melt id variables evtype 
+physicalDataTop10Melt <- melt(aggregatedPhysicalDataTop10, id.vars = "evtype")
+
+# build ggplot of top 10 
+physicalChart <- ggplot(physicalDataTop10Melt, aes(x = reorder(evtype, -value), y = value)) +
+                        geom_bar(stat = "identity", aes(fill = variable), position = "dodge") +
+                        scale_y_sqrt("Frequency count") +
+                        xlab("Event type") +
+                        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                        ggtitle("Top 10 US storm physical health impacts")
+
+print(physicalChart)
+```
+
+Plot of the top ten event types with the highest property and crop counts
+```{r eval = TRUE}
+# melt id variables evtype
+economicDataTop10Melt <- melt(aggregatedEconomicDataTop10, id.vars = "evtype")
+
+# build ggplot of top 10
+economicChart <- ggplot(economicDataTop10Melt, aes(x = reorder(evtype, -value), y = value)) +
+                        geom_bar(stat = "identity", aes(fill = variable), position = "dodge") +
+                        scale_y_sqrt("Frequency count") +
+                        xlab("Event type") +
+                        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+                        ggtitle("Top 10 US storm economic impacts")
+
+print(economicChart)
+```
+
+## Answers
+
+Across the United States, which types of events (as indicated in the 𝙴𝚅𝚃𝚈𝙿𝙴 variable) are most harmful with respect to population health?
+```
+Based on the results, tornados are the most harmful with to population health, fatalities and injuries.
+```
+
+Across the United States, which types of events have the greatest economic consequences?
+```
+Based on the results, floods have the greatest economic consequences.
+```
